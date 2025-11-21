@@ -41,9 +41,11 @@
         }
         /* Custom modal animation */
         .modal-enter {
+            opacity: 1;
             transition: opacity 0.3s ease-out;
         }
         .modal-leave {
+            opacity: 0;
             transition: opacity 0.3s ease-in;
         }
         .nav-link.active {
@@ -109,6 +111,8 @@
                     <button id="add-recipe-btn" disabled class="bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-600 transition duration-150 shadow-md disabled:bg-indigo-300 disabled:cursor-not-allowed">
                         Add New Recipe
                     </button>
+                    <!-- Sign Out is disabled when running on external platforms with anonymous sign-in 
+                         because the user will just sign back in anonymously on refresh. -->
                     <button id="sign-out-btn" onclick="handleSignOut()" class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-600 transition duration-150 shadow-md">
                         Sign Out
                     </button>
@@ -191,7 +195,7 @@
         </main>
     </div>
 
-    <!-- Add/Edit Recipe Modal (Remains the same for My Vault) -->
+    <!-- Add/Edit Recipe Modal -->
     <div id="recipe-modal" class="modal-enter hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4" onclick="closeModal(event)">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h3 id="modal-title" class="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">Add New Recipe</h3>
@@ -233,7 +237,7 @@
                               class="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                 </div>
                 
-                <!-- Share Toggle (New Field) -->
+                <!-- Share Toggle -->
                 <div class="flex items-center pt-2">
                     <input type="checkbox" id="is-public" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
                     <label for="is-public" class="ml-2 block text-sm font-medium text-gray-700">Share with Community (Make this recipe public)</label>
@@ -251,6 +255,22 @@
         </div>
     </div>
     
+    <!-- Confirmation Modal (Custom Delete) -->
+    <div id="confirmation-modal" class="modal-enter hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4" onclick="closeConfirmationModal(event)">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6" onclick="event.stopPropagation()">
+            <h3 id="confirm-title" class="text-xl font-bold text-gray-800 mb-4">Confirm Action</h3>
+            <p id="confirm-message" class="text-gray-700 mb-6">Are you sure you want to perform this action?</p>
+            <div class="flex justify-end space-x-3">
+                <button id="confirm-cancel" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition duration-150">
+                    Cancel
+                </button>
+                <button id="confirm-ok" class="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold shadow-md hover:bg-red-600 transition duration-150">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast/Notification Container -->
     <div id="toast-container" class="fixed bottom-4 right-4 space-y-2 z-50">
         <!-- Notifications will appear here -->
@@ -272,10 +292,52 @@
         // Set log level for debugging
         setLogLevel('Debug');
 
-        // Global variables provided by the Canvas environment
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-recipe-app';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // --- FIREBASE CONFIGURATION (IMPORTANT FOR GITHUB HOSTING) ---
+        // Global variables are provided by the Canvas environment. 
+        // If you are running this on GitHub or locally, these will be undefined, 
+        // so we use the FALLBACK configuration below.
+        
+        // **ACTION REQUIRED for GitHub:** You MUST replace the placeholder values in 
+        // FALLBACK_FIREBASE_CONFIG with your own credentials from the Firebase Console 
+        // (after setting up a Web App in your Firebase project).
+        const FALLBACK_FIREBASE_CONFIG = {
+            apiKey: "YOUR_FIREBASE_API_KEY_HERE", 
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",   
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "1234567890",
+            appId: "1:1234567890:web:abcdefg12345"
+        };
+        const FALLBACK_APP_ID = "portable-recipe-app";
+
+        // Check if the platform config is available AND doesn't look like a placeholder
+        const platformConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+        let platformConfig = {};
+        try {
+            platformConfig = JSON.parse(platformConfigString);
+        } catch (e) {
+            console.warn("Could not parse platform config.");
+        }
+        
+        const isPlatformConfigValid = Object.keys(platformConfig).length > 0 && !platformConfig.apiKey?.includes('YOUR_FIREBASE_API_KEY');
+        const isFallbackPlaceholder = FALLBACK_FIREBASE_CONFIG.apiKey.includes('YOUR_FIREBASE_API_KEY');
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : FALLBACK_APP_ID;
+        let firebaseConfig;
+        let initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        if (isPlatformConfigValid) {
+            // Use config provided by the Canvas platform
+            firebaseConfig = platformConfig;
+        } else if (!isFallbackPlaceholder) {
+            // Use the user-provided fallback config (running on GitHub/local)
+            firebaseConfig = FALLBACK_FIREBASE_CONFIG;
+            initialAuthToken = null; // We cannot use the platform token externally
+        } else {
+            // Placeholder fallback is still present. Set a minimal structure to prevent JS crash.
+            firebaseConfig = {}; 
+        }
+        // ----------------------------------------------------------------------
         
         // --- Global State ---
         let app, db, auth;
@@ -289,6 +351,9 @@
         let unsubscribePrivate = null;
         let unsubscribeCommunity = null;
         
+        // State for custom confirmation modal
+        let confirmationResolver = null;
+
         // --- Global Functions Exposed to Window ---
         // Expose functions called directly from HTML onclick attributes
         window.showModal = showModal;
@@ -300,6 +365,7 @@
         window.renderPage = renderPage; 
         window.showCommunityDetail = showCommunityDetail;
         window.handleSignOut = handleSignOut; 
+        window.closeConfirmationModal = closeConfirmationModal;
         // --- End of Global Function Exposure ---
 
 
@@ -358,8 +424,15 @@
 
         async function initializeFirebase() {
             try {
+                // Check if the user is running externally with placeholders
+                if (!isPlatformConfigValid && isFallbackPlaceholder) {
+                    showToast("Error: Missing Firebase API Key for external hosting.", "error");
+                    showAuthPage("🚨 ACTION REQUIRED: Please replace 'YOUR_FIREBASE_API_KEY_HERE' and other placeholders in the script with your own configuration to run this application.");
+                    return;
+                }
+                
                 if (Object.keys(firebaseConfig).length === 0) {
-                    showToast("Firebase configuration is missing. Data persistence will not work.", "error");
+                    showToast("Firebase configuration is missing.", "error");
                     showAuthPage("Firebase configuration is missing.");
                     return;
                 } 
@@ -371,19 +444,19 @@
                 // 1. Set persistence immediately
                 await setAuthPersistence(auth, browserLocalPersistence); 
                 
-                // 2. Attempt sign-in if no current user session is active
+                // 2. Attempt sign-in 
                 if (!auth.currentUser) {
                     if (initialAuthToken) {
-                        console.log("Attempting sign-in with Canvas custom token (persistent ID)...");
-                        // Await the custom token sign-in. If it fails, the user remains null.
+                        // Priority 1: Use the Canvas custom token for a persistent, unique ID
+                        console.log("Attempting sign-in with Canvas custom token...");
                         await signInWithCustomToken(auth, initialAuthToken)
                             .catch(e => {
-                                // Log error but do not try anonymous sign-in, as this new ID would break persistence.
-                                console.error("CRITICAL: Custom token sign-in failed. User ID will not be stable.", e);
+                                console.warn("Custom token sign-in failed. Falling back to anonymous.", e.message);
+                                signInAnonymously(auth);
                             });
                     } else {
-                        // Only use anonymous if the persistent token is explicitly missing.
-                        console.log("No custom token found. Attempting anonymous sign-in (local ID)...");
+                        // Priority 2: Use anonymous sign-in (standard for external hosting)
+                        console.log("No custom token found. Attempting anonymous sign-in...");
                         await signInAnonymously(auth);
                     }
                 }
@@ -401,7 +474,7 @@
                         // --- Authenticated User Path (Any type: Token, Anonymous) ---
                         userId = user.uid;
                         
-                        // Display the last 8 chars for stability verification
+                        // Display the last 8 chars of the ID (important for collaboration)
                         const shortId = userId.substring(userId.length - 8);
                         const displayId = `...${shortId}`; 
                         document.getElementById('user-display').textContent = `User ID: ${displayId}`;
@@ -416,19 +489,61 @@
                         renderPage(currentPage);
                         
                     } else {
-                        // --- Completely Signed Out or Token failed ---
+                        // --- Completely Signed Out ---
                         userId = null;
                         console.log("User is completely signed out.");
-                        showAuthPage("You have been signed out. Access your session by refreshing the page.");
+                        showAuthPage("You have been signed out. Refresh the page to start a new session.");
                     }
                 });
                 
             } catch (error) {
                 console.error("Firebase setup error:", error);
-                showToast("Failed to initialize Firebase.", "error");
+                showToast("Failed to initialize Firebase. Check console for details.", "error");
                 showAuthPage("Failed to initialize Firebase.");
             }
         }
+
+        // --- Custom Confirmation Modal Logic ---
+        function showConfirmationModal(title, message) {
+            const modal = document.getElementById('confirmation-modal');
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            
+            modal.classList.remove('hidden', 'modal-leave');
+            modal.classList.add('modal-enter');
+
+            return new Promise((resolve) => {
+                confirmationResolver = resolve;
+            });
+        }
+        
+        function closeConfirmationModal(event) {
+             const modal = document.getElementById('confirmation-modal');
+             // Check if the click target is the modal backdrop, or the OK/Cancel buttons
+             if (event.target.id === 'confirmation-modal' || event.target.id === 'confirm-cancel' || event.target.id === 'confirm-ok') {
+                
+                modal.classList.remove('modal-enter');
+                modal.classList.add('modal-leave');
+                
+                // Resolve the promise if clicking OK, or false if clicking cancel/outside
+                if (confirmationResolver) {
+                    const result = event.target.id === 'confirm-ok';
+                    confirmationResolver(result);
+                    confirmationResolver = null; 
+                }
+
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('modal-leave');
+                }, 300);
+            }
+        }
+        
+        // Attach event listeners for OK/Cancel buttons 
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('confirm-ok')?.addEventListener('click', closeConfirmationModal);
+            document.getElementById('confirm-cancel')?.addEventListener('click', closeConfirmationModal);
+        });
 
         // Call initialization on load
         initializeFirebase();
@@ -437,7 +552,7 @@
         
         async function handleSignOut() {
             try {
-                // When signing out, we just sign out, the listener will take care of showing the login page.
+                // Note: If running on GitHub with anonymous auth, the user signs right back in on refresh.
                 await signOut(auth);
                 showToast("Successfully signed out.", "success");
             } catch (error) {
@@ -491,18 +606,17 @@
                     ? `Total recipes: ${recipes.length}. User ID: ...${shortId}`
                     : "No recipes yet! Add your first one.";
 
-                if (currentPage === 'my-vault' && currentRecipeId) {
+                // Re-select current recipe if it exists, or select the first one
+                if (currentPage === 'my-vault') {
                     const selectedRecipe = allPrivateRecipes.find(r => r.id === currentRecipeId);
                     if (selectedRecipe) {
                          selectRecipe(currentRecipeId, selectedRecipe.name, false);
+                    } else if (allPrivateRecipes.length > 0) {
+                        selectRecipe(allPrivateRecipes[0].id, allPrivateRecipes[0].name);
                     } else {
                         currentRecipeId = null;
                         renderRecipeDetail(null);
                     }
-                } else if (allPrivateRecipes.length > 0 && !currentRecipeId) {
-                    selectRecipe(allPrivateRecipes[0].id, allPrivateRecipes[0].name);
-                } else if (allPrivateRecipes.length === 0) {
-                    renderRecipeDetail(null);
                 }
             }, (error) => {
                 console.error("Error listening to private recipes:", error);
@@ -555,6 +669,8 @@
             if (pageName === 'my-vault') {
                 document.getElementById('my-vault-page').classList.remove('hidden');
                 addBtn.classList.remove('hidden');
+                // Ensure list is rendered if we switch back
+                renderRecipeList(allPrivateRecipes); 
             } else if (pageName === 'community') {
                 document.getElementById('community-page').classList.remove('hidden');
                 addBtn.classList.add('hidden');
@@ -798,10 +914,13 @@
             if (recipe) {
                 renderRecipeDetail(recipe);
             } else {
+                // If recipe was just deleted, clear the detail view
                 renderRecipeDetail(null);
+                currentRecipeId = null; 
             }
 
             if (updateList) {
+                // Remove active styling from all buttons
                 document.querySelectorAll('#recipe-list button').forEach(btn => {
                     btn.classList.remove('bg-indigo-100', 'text-indigo-700', 'shadow-inner');
                     btn.classList.add('bg-gray-50', 'hover:bg-indigo-50', 'hover:text-indigo-600');
@@ -812,6 +931,7 @@
                     }
                 });
 
+                // Apply active styling to the selected button
                 const currentButton = document.getElementById(`recipe-item-${recipeId}`);
                 if (currentButton) {
                     currentButton.classList.add('bg-indigo-100', 'text-indigo-700', 'shadow-inner');
@@ -825,6 +945,8 @@
             }
         }
         
+        document.getElementById('add-recipe-btn').addEventListener('click', () => showModal());
+
         function showModal(recipe = null) {
             const modal = document.getElementById('recipe-modal');
             const form = document.getElementById('recipe-form');
@@ -885,8 +1007,13 @@
         }
 
         async function deleteRecipe(recipeId, recipeName) {
-            // Using window.confirm() for simple UI prompt, as requested to replace custom modal.
-            if (!confirm(`Are you sure you want to delete the recipe "${recipeName}"?`)) {
+            
+            const confirmed = await showConfirmationModal(
+                "Delete Recipe Confirmation",
+                `Are you absolutely sure you want to permanently delete "${recipeName}"? This action cannot be undone.`
+            );
+
+            if (!confirmed) {
                 return;
             }
 
@@ -897,142 +1024,86 @@
             }
 
             try {
-                const privateDocRef = doc(recipesColRef, recipeId);
-                await deleteDoc(privateDocRef);
-                
-                const communityColRef = getCommunityRecipesCollectionRef();
-                const communityDocRef = doc(communityColRef, recipeId);
-                await deleteDoc(communityDocRef).catch(err => {
-                    // Ignore errors if the document wasn't found or permission was denied (if not public)
-                    if (err.code !== 'not-found' && err.code !== 'permission-denied') {
-                         console.warn("Could not delete community entry (may not exist):", err);
-                    }
-                });
-
-                showToast(`Recipe "${recipeName}" deleted successfully!`);
-                
-                if (currentRecipeId === recipeId) {
-                    currentRecipeId = null;
-                    renderRecipeDetail(null);
-                }
-            } catch (e) {
-                console.error("Error deleting recipe: ", e);
-                showToast(`Failed to delete recipe: ${e.message}`, "error");
+                // Delete the document
+                await deleteDoc(doc(recipesColRef, recipeId));
+                showToast(`Recipe "${recipeName}" deleted!`, "success");
+            } catch (error) {
+                console.error("Error deleting recipe:", error);
+                showToast(`Failed to delete recipe: ${error.message}`, "error");
             }
         }
-
-        // --- Event Listeners and Form Submission ---
-
-        document.getElementById('add-recipe-btn').addEventListener('click', () => showModal());
         
+        // --- Form Submission (Add/Edit) ---
         document.getElementById('recipe-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const saveBtn = document.getElementById('save-recipe-btn');
-            saveBtn.disabled = true; 
-            saveBtn.textContent = currentRecipeId ? 'Updating...' : 'Saving...';
-
-            if (!userId) {
-                showToast("Authentication is still loading. Please wait a moment and try again.", "warning");
-                saveBtn.disabled = false;
-                saveBtn.textContent = currentRecipeId ? 'Save Recipe' : 'Add Recipe';
-                return;
-            }
-
             const name = document.getElementById('recipe-name').value.trim();
             const prepTime = parseInt(document.getElementById('prep-time').value);
             const cookTime = parseInt(document.getElementById('cook-time').value);
             const ingredients = document.getElementById('ingredients').value.trim();
             const instructions = document.getElementById('instructions').value.trim();
-            const isPublic = document.getElementById('is-public').checked; 
-            
-            if (!name || isNaN(prepTime) || isNaN(cookTime) || !ingredients || !instructions) {
-                showToast("Please fill out all fields correctly.", "warning");
-                saveBtn.disabled = false;
-                saveBtn.textContent = currentRecipeId ? 'Save Recipe' : 'Add Recipe';
-                return;
-            }
+            const isPublic = document.getElementById('is-public').checked;
 
             const recipeData = {
                 name,
                 prepTime,
                 cookTime,
-                ingredients, 
-                instructions, 
-                isPublic, 
-                createdAt: new Date().getTime(),
-                userId: userId, 
+                ingredients,
+                instructions,
+                isPublic,
+                userId: userId,
             };
-            
-            const privateColRef = getPrivateRecipesCollectionRef();
+
+            const isEditing = !!currentRecipeId;
+            const recipesColRef = getPrivateRecipesCollectionRef();
             const communityColRef = getCommunityRecipesCollectionRef();
 
-            if (!privateColRef || !communityColRef) {
-                console.error("Firebase references could not be created. Check if DB is initialized and User ID is set.");
-                showToast("Cannot connect to your Vault. Please refresh and try again.", "error");
-                saveBtn.disabled = false;
-                saveBtn.textContent = currentRecipeId ? 'Save Recipe' : 'Add Recipe';
+            if (!recipesColRef || !communityColRef) {
+                showToast("Authentication or database connection error.", "error");
                 return;
             }
-            
-            try {
-                if (currentRecipeId) {
-                    // 1. Update existing private recipe
-                    const privateDocRef = doc(privateColRef, currentRecipeId);
-                    await updateDoc(privateDocRef, recipeData);
 
-                    // 2. Manage community copy
+            try {
+                if (isEditing) {
+                    // 1. Update Private Recipe (Always update here)
+                    const privateDocRef = doc(recipesColRef, currentRecipeId);
+                    await updateDoc(privateDocRef, recipeData);
+                    
+                    // 2. Update/Delete Community Recipe
                     const communityDocRef = doc(communityColRef, currentRecipeId);
                     if (isPublic) {
-                        await setDoc(communityDocRef, { ...recipeData, id: currentRecipeId }); 
+                        // If sharing, set/overwrite the community document (using the same ID)
+                        await setDoc(communityDocRef, recipeData);
                     } else {
-                        await deleteDoc(communityDocRef).catch(err => {
-                            if (err.code !== 'not-found' && err.code !== 'permission-denied') throw err;
-                        });
+                        // If unsharing, delete it from the community collection
+                        await deleteDoc(communityDocRef).catch(() => {}); // Ignore error if it didn't exist
                     }
-                    
-                    showToast(`Recipe "${name}" updated successfully!`);
+
+                    showToast(`Recipe "${name}" updated successfully!`, "success");
 
                 } else {
-                    // Add new recipe 
-                    
-                    // 1. Add to private collection (Firestore generates the ID)
-                    const newPrivateDocRef = await addDoc(privateColRef, recipeData);
-                    
-                    // 2. If public, also add to community collection using the same ID
+                    // 1. Add Private Recipe (Firestore assigns ID)
+                    const newPrivateDocRef = await addDoc(recipesColRef, recipeData);
+                    currentRecipeId = newPrivateDocRef.id;
+
+                    // 2. Conditionally Add Community Recipe
                     if (isPublic) {
+                        // Use the new private ID for the public document
                         const communityDocRef = doc(communityColRef, newPrivateDocRef.id);
-                        await setDoc(communityDocRef, { ...recipeData, id: newPrivateDocRef.id }); 
+                        await setDoc(communityDocRef, recipeData);
                     }
                     
-                    showToast(`Recipe "${name}" added successfully!`);
+                    showToast(`New recipe "${name}" created!`, "success");
                 }
-                
+
                 hideModal();
-
-            } catch (e) {
-                console.error("Error saving recipe: ", e);
-                showToast(`Failed to save recipe: ${e.message}`, "error");
-            } finally {
-                saveBtn.disabled = false;
-                saveBtn.textContent = 'Save Recipe';
+                selectRecipe(currentRecipeId, name);
+                
+            } catch (error) {
+                console.error("Error saving recipe:", error);
+                showToast(`Failed to save recipe: ${error.message}`, "error");
             }
         });
-        
-        document.getElementById('search-input').addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase().trim();
-            if (searchTerm === "") {
-                renderRecipeList(allPrivateRecipes);
-                return;
-            }
-
-            const filteredRecipes = allPrivateRecipes.filter(recipe => 
-                recipe.name.toLowerCase().includes(searchTerm)
-            );
-            
-            renderRecipeList(filteredRecipes);
-        });
-        
     </script>
 </body>
 </html>
