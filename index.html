@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Flavor Vault</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        /* Custom scrollbar styling for recipe list */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #e0e7ff;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #818cf8;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #6366f1;
+        }
+        /* Custom styles for the Recipe Card button */
+        .btn-primary {
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);
+        }
+        /* Custom modal animation */
+        .modal-enter {
+            transition: opacity 0.3s ease-out;
+        }
+        .modal-leave {
+            transition: opacity 0.3s ease-in;
+        }
+        .nav-link.active {
+            background-color: #f0f4ff; /* indigo-50 */
+            color: #4f46e5; /* indigo-600 */
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header & Navigation -->
+    <header class="bg-white shadow-md sticky top-0 z-20">
+        <div class="max-w-7xl mx-auto flex justify-between items-center p-4">
+            <h1 class="text-3xl font-bold text-indigo-600 tracking-tight">The Flavor Vault</h1>
+            
+            <!-- Navigation Links -->
+            <nav class="flex space-x-2 border border-gray-200 rounded-lg p-1 bg-gray-50">
+                <button id="nav-my-vault" class="nav-link px-4 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-200 transition" onclick="renderPage('my-vault')">
+                    My Vault
+                </button>
+                <button id="nav-community" class="nav-link px-4 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-200 transition" onclick="renderPage('community')">
+                    Community Recipes
+                </button>
+                <button id="nav-about" class="nav-link px-4 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-200 transition" onclick="renderPage('about')">
+                    About Us
+                </button>
+            </nav>
+
+            <div class="flex items-center space-x-4">
+                <span id="user-display" class="text-sm font-medium text-gray-700">Loading User...</span>
+                <button id="add-recipe-btn" class="bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-600 transition duration-150 shadow-md">
+                    Add New Recipe
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl mx-auto w-full p-4 relative">
+        
+        <!-- 1. MY VAULT PAGE (Default View) -->
+        <div id="my-vault-page" class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full absolute w-full top-0 left-0 p-4 pt-0">
+
+            <!-- Recipe List Sidebar (Left) -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg h-full max-h-[calc(100vh-140px)] flex flex-col">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">My Private Recipes</h2>
+                
+                <!-- Search Bar -->
+                <div class="mb-4">
+                    <input type="text" id="search-input" placeholder="Search my recipes..."
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                </div>
+
+                <!-- List Container -->
+                <div id="recipe-list" class="space-y-3 flex-grow custom-scrollbar overflow-y-auto pr-2">
+                    <!-- Recipe list items will be injected here -->
+                    <p class="text-gray-500 text-center py-4">Loading recipes...</p>
+                </div>
+                <p id="list-footer" class="text-sm text-gray-500 mt-4 text-center">Your private recipe collection.</p>
+            </div>
+
+            <!-- Recipe Detail Viewer (Right) -->
+            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+                <div id="recipe-detail-container" class="space-y-6">
+                    <!-- Recipe details will be displayed here -->
+                    <div class="text-center py-20 text-gray-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-indigo-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                        </svg>
+                        <h3 class="mt-2 text-lg font-medium">Select a Recipe</h3>
+                        <p class="mt-1 text-sm">Choose a recipe from the index to view its full details, or click 'Add New Recipe' to start creating.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 2. COMMUNITY PAGE (Public Data) -->
+        <div id="community-page" class="hidden h-full">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-2">Community Shared Recipes</h2>
+            <p class="text-gray-600 mb-6">Browse and enjoy recipes shared by other users of The Flavor Vault. All recipes here are public.</p>
+            
+            <div id="community-recipe-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Community recipe cards will be loaded here -->
+                <div class="bg-white p-6 rounded-xl shadow-lg text-center col-span-full">
+                    <p class="text-gray-500">Loading community recipes...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 3. ABOUT US PAGE (Static Content) -->
+        <div id="about-page" class="hidden h-full max-w-3xl mx-auto bg-white p-10 rounded-xl shadow-lg">
+            <h2 class="text-3xl font-bold text-gray-800 mb-4 border-b pb-2">About The Flavor Vault</h2>
+            <p class="text-lg text-indigo-600 mb-6">Your personal kitchen companion for managing and discovering recipes.</p>
+            
+            <div class="space-y-6 text-gray-700">
+                <p>The Flavor Vault was created to help home cooks organize their favorite dishes. We believe that keeping track of your best recipes should be easy, secure, and always accessible.</p>
+                
+                <h3 class="text-xl font-semibold border-b pb-1">Features</h3>
+                <ul class="list-disc list-inside space-y-2">
+                    <li>My Vault: Securely store your private recipes using Firebase Firestore.</li>
+                    <li>Community: Share and explore recipes publicly with others.</li>
+                    <li>Responsive Design: Access your recipes easily on any device, from phone to desktop.</li>
+                </ul>
+                
+                <h3 class="text-xl font-semibold border-b pb-1">Our Mission</h3>
+                <p>a small community where users can save their culinary creations and find new inspiration from others.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Add/Edit Recipe Modal (Remains the same for My Vault) -->
+    <div id="recipe-modal" class="modal-enter hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4" onclick="closeModal(event)">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <h3 id="modal-title" class="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">Add New Recipe</h3>
+            <form id="recipe-form" class="space-y-4">
+                
+                <!-- Recipe Name -->
+                <div>
+                    <label for="recipe-name" class="block text-sm font-medium text-gray-700">Recipe Name</label>
+                    <input type="text" id="recipe-name" required
+                           class="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+
+                <!-- Prep Time -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="prep-time" class="block text-sm font-medium text-gray-700">Prep Time (mins)</label>
+                        <input type="number" id="prep-time" required min="1"
+                               class="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <!-- Cook Time -->
+                    <div>
+                        <label for="cook-time" class="block text-sm font-medium text-gray-700">Cook Time (mins)</label>
+                        <input type="number" id="cook-time" required min="0"
+                               class="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <!-- Ingredients (Textarea) -->
+                <div>
+                    <label for="ingredients" class="block text-sm font-medium text-gray-700">Ingredients (List each item on a new line)</label>
+                    <textarea id="ingredients" rows="4" required
+                              class="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                </div>
+
+                <!-- Instructions (Textarea) -->
+                <div>
+                    <label for="instructions" class="block text-sm font-medium text-gray-700">Instructions (List each step on a new line)</label>
+                    <textarea id="instructions" rows="6" required
+                              class="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                </div>
+                
+                <!-- Share Toggle (New Field) -->
+                <div class="flex items-center pt-2">
+                    <input type="checkbox" id="is-public" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                    <label for="is-public" class="ml-2 block text-sm font-medium text-gray-700">Share with Community (Make this recipe public)</label>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="hideModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition duration-150">
+                        Cancel
+                    </button>
+                    <button type="submit" id="save-recipe-btn" class="btn-primary px-4 py-2 bg-indigo-500 text-white rounded-lg font-semibold shadow-md">
+                        Save Recipe
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Toast/Notification Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 space-y-2 z-50">
+        <!-- Notifications will appear here -->
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, collection, doc, setDoc, addDoc, onSnapshot, deleteDoc, query, orderBy, where, getDocs, updateDoc, 
+            setLogLevel 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Set log level for debugging
+        setLogLevel('Debug');
+
+        // Global variables provided by the Canvas environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-recipe-app';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // --- Global State ---
+        let app, db, auth;
+        let userId = null;
+        let currentPage = 'my-vault'; // New state variable for routing
+        let currentRecipeId = null; 
+        let allPrivateRecipes = []; // Cache of user's private recipes
+        let allCommunityRecipes = []; // Cache of public recipes
+
+        // Global functions exposed to the window scope
+        window.showModal = showModal;
+        window.hideModal = hideModal;
+        window.closeModal = closeModal;
+        window.selectRecipe = selectRecipe;
+        window.deleteRecipe = deleteRecipe;
+        window.editRecipe = editRecipe;
+        window.renderPage = renderPage; // Expose routing function
+        // FIX: Expose showCommunityDetail to the window scope
+        window.showCommunityDetail = showCommunityDetail;
+
+        // --- Utility Functions ---
+
+        function showToast(message, type = 'success') {
+            const toastContainer = document.getElementById('toast-container');
+            const color = type === 'error' ? 'red' : type === 'warning' ? 'yellow' : 'green';
+            
+            const toast = document.createElement('div');
+            toast.className = `p-4 rounded-lg shadow-xl bg-${color}-500 text-white font-medium transition-all duration-300 transform translate-x-0 opacity-100`;
+            toast.innerHTML = `<p>${message}</p>`;
+
+            toastContainer.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, 3000);
+        }
+
+        // --- Firebase Initialization ---
+
+        try {
+            if (Object.keys(firebaseConfig).length === 0) {
+                showToast("Firebase configuration is missing. Data persistence will not work.", "error");
+                document.getElementById('user-display').textContent = "Not Connected";
+            } else {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        document.getElementById('user-display').textContent = `User: ${userId.substring(0, 8)}...`;
+                        console.log("User signed in:", userId);
+                        // Start listeners after successful sign-in
+                        setupPrivateRecipeListener();
+                        setupCommunityRecipeListener();
+                    } else {
+                        try {
+                            if (initialAuthToken) {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
+                        } catch (error) {
+                            console.error("Authentication failed:", error);
+                            showToast("Authentication failed. Check console.", "error");
+                            document.getElementById('user-display').textContent = "Auth Error";
+                        }
+                    }
+                });
+                // Initial page render
+                renderPage(currentPage); 
+            }
+        } catch (error) {
+            console.error("Firebase setup error:", error);
+            showToast("Failed to initialize Firebase.", "error");
+        }
+
+        // --- Firestore Collection Reference Functions ---
+
+        // Private data path: /artifacts/{appId}/users/{userId}/{your_collection_name}
+        function getPrivateRecipesCollectionRef() {
+            if (!db || !userId) return null;
+            const collectionPath = `artifacts/${appId}/users/${userId}/recipes`;
+            return collection(db, collectionPath);
+        }
+
+        // Public data path: /artifacts/{appId}/public/data/{your_collection_name}
+        function getCommunityRecipesCollectionRef() {
+            if (!db) return null;
+            const collectionPath = `artifacts/${appId}/public/data/community_recipes`;
+            return collection(db, collectionPath);
+        }
+
+        // --- Data Listeners ---
+
+        function setupPrivateRecipeListener() {
+            const recipesColRef = getPrivateRecipesCollectionRef();
+            if (!recipesColRef) return;
+            
+            const q = query(recipesColRef);
+
+            onSnapshot(q, (snapshot) => {
+                const recipes = [];
+                snapshot.forEach((doc) => {
+                    recipes.push({ id: doc.id, ...doc.data() });
+                });
+                
+                allPrivateRecipes = recipes;
+                if (currentPage === 'my-vault') {
+                    renderRecipeList(recipes);
+                }
+                
+                document.getElementById('list-footer').textContent = recipes.length > 0
+                    ? `Total recipes: ${recipes.length}. User ID: ${userId.substring(0, 8)}...`
+                    : "No recipes yet! Add your first one.";
+
+                // Re-select if needed
+                if (currentPage === 'my-vault' && currentRecipeId) {
+                    const selectedRecipe = allPrivateRecipes.find(r => r.id === currentRecipeId);
+                    if (selectedRecipe) {
+                         selectRecipe(currentRecipeId, selectedRecipe.name, false);
+                    } else {
+                        currentRecipeId = null;
+                        renderRecipeDetail(null);
+                    }
+                } else if (allPrivateRecipes.length > 0 && !currentRecipeId) {
+                    // Automatically select the first recipe when loaded
+                    selectRecipe(allPrivateRecipes[0].id, allPrivateRecipes[0].name);
+                } else if (allPrivateRecipes.length === 0) {
+                    renderRecipeDetail(null);
+                }
+            }, (error) => {
+                console.error("Error listening to private recipes:", error);
+                showToast("Failed to fetch private recipes.", "error");
+            });
+        }
+        
+        function setupCommunityRecipeListener() {
+            const communityColRef = getCommunityRecipesCollectionRef();
+            if (!communityColRef) return;
+            
+            // Note: Community recipes are public and read-only for all users.
+            const q = query(communityColRef);
+
+            onSnapshot(q, (snapshot) => {
+                const recipes = [];
+                snapshot.forEach((doc) => {
+                    recipes.push({ id: doc.id, ...doc.data() });
+                });
+                
+                allCommunityRecipes = recipes;
+                if (currentPage === 'community') {
+                    renderCommunityGrid(recipes);
+                }
+            }, (error) => {
+                console.error("Error listening to community recipes:", error);
+                showToast("Failed to fetch community recipes.", "error");
+            });
+        }
+
+        // --- Routing and Page Rendering ---
+
+        function renderPage(pageName) {
+            currentPage = pageName;
+            
+            // Update active navigation link styling
+            document.querySelectorAll('.nav-link').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`nav-${pageName}`).classList.add('active');
+
+            // Hide all pages
+            document.getElementById('my-vault-page').classList.add('hidden');
+            document.getElementById('community-page').classList.add('hidden');
+            document.getElementById('about-page').classList.add('hidden');
+
+            // Handle the Add Recipe Button visibility
+            const addBtn = document.getElementById('add-recipe-btn');
+            if (pageName === 'my-vault') {
+                document.getElementById('my-vault-page').classList.remove('hidden');
+                addBtn.classList.remove('hidden');
+            } else if (pageName === 'community') {
+                document.getElementById('community-page').classList.remove('hidden');
+                addBtn.classList.add('hidden');
+                renderCommunityGrid(allCommunityRecipes); // Re-render community data
+            } else if (pageName === 'about') {
+                document.getElementById('about-page').classList.remove('hidden');
+                addBtn.classList.add('hidden');
+            }
+        }
+        
+        // --- UI Rendering Functions (My Vault) ---
+
+        function renderRecipeList(recipes) {
+            const listContainer = document.getElementById('recipe-list');
+            listContainer.innerHTML = ''; 
+
+            if (recipes.length === 0) {
+                listContainer.innerHTML = '<p class="text-gray-500 text-center py-4">No recipes found. Start adding some!</p>';
+                return;
+            }
+            
+            recipes.forEach(recipe => {
+                const isActive = recipe.id === currentRecipeId;
+                const recipeItem = `
+                    <button id="recipe-item-${recipe.id}"
+                        onclick="selectRecipe('${recipe.id}', '${recipe.name.replace(/'/g, "\\'")}', true)"
+                        class="w-full text-left p-3 rounded-lg transition duration-150 ease-in-out 
+                               ${isActive ? 'bg-indigo-100 text-indigo-700 shadow-inner' : 'bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600'}">
+                        <span class="font-semibold truncate block">${recipe.name}</span>
+                        <span class="text-xs ${isActive ? 'text-indigo-500' : 'text-gray-400'}">${recipe.prepTime}m Prep / ${recipe.cookTime}m Cook</span>
+                    </button>
+                `;
+                listContainer.innerHTML += recipeItem;
+            });
+        }
+
+        function formatTextToList(text, ordered = false) {
+            if (!text) return '<p class="text-gray-500">None provided.</p>';
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            if (ordered) {
+                return lines.map((line, index) => `<li class="mb-3 pl-2">${index + 1}. ${line.trim()}</li>`).join('');
+            } else {
+                return lines.map(line => `<li class="list-disc ml-6">${line.trim()}</li>`).join('');
+            }
+        }
+
+        function renderRecipeDetail(recipe) {
+            const detailContainer = document.getElementById('recipe-detail-container');
+            
+            if (!recipe) {
+                detailContainer.innerHTML = `
+                    <div class="text-center py-20 text-gray-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-indigo-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                        </svg>
+                        <h3 class="mt-2 text-lg font-medium">Select a Recipe</h3>
+                        <p class="mt-1 text-sm">Choose a recipe from the index to view its full details.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const totalTime = parseInt(recipe.prepTime || 0) + parseInt(recipe.cookTime || 0);
+
+            detailContainer.innerHTML = `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-start border-b pb-4">
+                        <div>
+                            <h2 class="text-4xl font-bold text-gray-800">${recipe.name}</h2>
+                            <p class="text-sm text-indigo-600 font-medium mt-1">Total Time: <span class="text-gray-600">${totalTime} minutes</span></p>
+                            <p class="text-xs text-gray-400 mt-1">Shared: ${recipe.isPublic ? 'Yes' : 'No'}</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="editRecipe('${recipe.id}')" 
+                                class="p-2 bg-yellow-100 text-yellow-600 rounded-full hover:bg-yellow-200 transition duration-150" 
+                                title="Edit Recipe">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                                    <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                            <button onclick="deleteRecipe('${recipe.id}', '${recipe.name.replace(/'/g, "\\'")}')" 
+                                class="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition duration-150" 
+                                title="Delete Recipe">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Prep and Cook Time Cards -->
+                    <div class="grid grid-cols-2 gap-4 text-center">
+                        <div class="bg-indigo-50 p-4 rounded-lg shadow-inner">
+                            <p class="text-xl font-bold text-indigo-700">${recipe.prepTime} min</p>
+                            <p class="text-sm text-indigo-500">Prep Time</p>
+                        </div>
+                        <div class="bg-indigo-50 p-4 rounded-lg shadow-inner">
+                            <p class="text-xl font-bold text-indigo-700">${recipe.cookTime} min</p>
+                            <p class="text-sm text-indigo-500">Cook Time</p>
+                        </div>
+                    </div>
+
+                    <!-- Ingredients Section -->
+                    <div class="bg-gray-50 p-5 rounded-xl shadow">
+                        <h3 class="text-2xl font-semibold text-gray-700 mb-3 border-b pb-2">Ingredients</h3>
+                        <ul class="text-gray-600 list-none space-y-1">
+                            ${formatTextToList(recipe.ingredients)}
+                        </ul>
+                    </div>
+
+                    <!-- Instructions Section -->
+                    <div class="bg-gray-50 p-5 rounded-xl shadow">
+                        <h3 class="text-2xl font-semibold text-gray-700 mb-3 border-b pb-2">Instructions</h3>
+                        <ol class="text-gray-600 list-none space-y-2">
+                            ${formatTextToList(recipe.instructions, true)}
+                        </ol>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // --- UI Rendering Functions (Community) ---
+        
+        function renderCommunityGrid(recipes) {
+            const gridContainer = document.getElementById('community-recipe-grid');
+            gridContainer.innerHTML = '';
+            
+            if (recipes.length === 0) {
+                gridContainer.innerHTML = `
+                    <div class="bg-white p-6 rounded-xl shadow-lg text-center col-span-full">
+                        <p class="text-gray-500">No community recipes have been shared yet. Be the first to share one!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            recipes.forEach(recipe => {
+                const totalTime = parseInt(recipe.prepTime || 0) + parseInt(recipe.cookTime || 0);
+                
+                const card = `
+                    <div class="bg-white p-5 rounded-xl shadow-lg border-t-4 border-indigo-400 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800 mb-2 truncate">${recipe.name}</h3>
+                            <p class="text-sm text-gray-500 mb-3">
+                                Shared by user: <span class="font-medium">${(recipe.userId || 'Unknown').substring(0, 8)}...</span>
+                            </p>
+                            <div class="flex justify-between items-center text-sm text-gray-600">
+                                <span>Prep: ${recipe.prepTime} min</span>
+                                <span>Cook: ${recipe.cookTime} min</span>
+                            </div>
+                            <p class="text-xs text-indigo-500 mt-2">Total Time: ${totalTime} min</p>
+                        </div>
+                        <button onclick="showCommunityDetail('${recipe.id}')" 
+                                class="mt-4 w-full bg-indigo-500 text-white py-2 rounded-lg text-sm font-semibold hover:bg-indigo-600 transition duration-150">
+                            View Recipe
+                        </button>
+                    </div>
+                `;
+                gridContainer.innerHTML += card;
+            });
+        }
+        
+        function showCommunityDetail(recipeId) {
+            const recipe = allCommunityRecipes.find(r => r.id === recipeId);
+            if (!recipe) {
+                showToast("Community recipe not found.", "error");
+                return;
+            }
+            
+            // Re-use the existing modal structure for viewing public details
+            const modal = document.getElementById('recipe-modal');
+            const contentDiv = document.querySelector('#recipe-modal > div');
+            
+            // Clean up any previous read-only view
+            const communityViewCleanup = document.getElementById('community-detail-view');
+            if (communityViewCleanup) communityViewCleanup.remove();
+
+            // Customize modal for read-only view
+            document.getElementById('modal-title').textContent = `Community Recipe: ${recipe.name}`;
+            document.getElementById('recipe-form').classList.add('hidden'); // Hide form controls
+            
+            // Generate detailed read-only content
+            const detailHtml = `
+                <div id="community-detail-view" class="space-y-4 pt-4">
+                    <p class="text-sm text-gray-500 border-b pb-2">Shared by user: <span class="font-medium text-indigo-600">${(recipe.userId || 'Unknown').substring(0, 8)}...</span></p>
+
+                    <div class="grid grid-cols-2 gap-4 text-center">
+                        <div class="bg-indigo-50 p-3 rounded-lg">
+                            <p class="text-lg font-bold text-indigo-700">${recipe.prepTime} min</p>
+                            <p class="text-xs text-indigo-500">Prep Time</p>
+                        </div>
+                        <div class="bg-indigo-50 p-3 rounded-lg">
+                            <p class="text-lg font-bold text-indigo-700">${recipe.cookTime} min</p>
+                            <p class="text-xs text-indigo-500">Cook Time</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-100 p-4 rounded-lg">
+                        <h4 class="text-lg font-semibold text-gray-700 mb-2 border-b">Ingredients</h4>
+                        <ul class="text-gray-600 list-none space-y-1">
+                            ${formatTextToList(recipe.ingredients)}
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-gray-100 p-4 rounded-lg">
+                        <h4 class="text-lg font-semibold text-gray-700 mb-2 border-b">Instructions</h4>
+                        <ol class="text-gray-600 list-none space-y-2">
+                            ${formatTextToList(recipe.instructions, true)}
+                        </ol>
+                    </div>
+
+                    <div class="flex justify-end pt-4">
+                        <button type="button" onclick="hideModal()" class="px-4 py-2 bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-600 transition">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Append the read-only view to the modal content and show
+            contentDiv.insertAdjacentHTML('beforeend', detailHtml);
+            modal.classList.remove('hidden', 'modal-leave');
+            modal.classList.add('modal-enter');
+        }
+
+
+        // --- Interaction Logic (My Vault, Modal) ---
+
+        function selectRecipe(recipeId, recipeName, updateList = true) {
+            currentRecipeId = recipeId;
+            const recipe = allPrivateRecipes.find(r => r.id === recipeId);
+
+            if (recipe) {
+                renderRecipeDetail(recipe);
+            } else {
+                renderRecipeDetail(null);
+            }
+
+            if (updateList) {
+                document.querySelectorAll('#recipe-list button').forEach(btn => {
+                    btn.classList.remove('bg-indigo-100', 'text-indigo-700', 'shadow-inner');
+                    btn.classList.add('bg-gray-50', 'hover:bg-indigo-50', 'hover:text-indigo-600');
+                    const span = btn.querySelector('span:last-child');
+                    if (span) {
+                        span.classList.remove('text-indigo-500');
+                        span.classList.add('text-gray-400');
+                    }
+                });
+
+                const currentButton = document.getElementById(`recipe-item-${recipeId}`);
+                if (currentButton) {
+                    currentButton.classList.add('bg-indigo-100', 'text-indigo-700', 'shadow-inner');
+                    currentButton.classList.remove('bg-gray-50', 'hover:bg-indigo-50', 'hover:text-indigo-600');
+                    const span = currentButton.querySelector('span:last-child');
+                    if (span) {
+                        span.classList.add('text-indigo-500');
+                        span.classList.remove('text-gray-400');
+                    }
+                }
+            }
+        }
+        
+        function showModal(recipe = null) {
+            const modal = document.getElementById('recipe-modal');
+            const form = document.getElementById('recipe-form');
+            const modalTitle = document.getElementById('modal-title');
+            
+            // Clean up any previous read-only view
+            const communityView = document.getElementById('community-detail-view');
+            if (communityView) communityView.remove();
+            
+            form.classList.remove('hidden'); // Show form controls
+            form.reset();
+            currentRecipeId = null; 
+
+            if (recipe) {
+                modalTitle.textContent = `Edit Recipe: ${recipe.name}`;
+                document.getElementById('recipe-name').value = recipe.name;
+                document.getElementById('prep-time').value = recipe.prepTime;
+                document.getElementById('cook-time').value = recipe.cookTime;
+                document.getElementById('ingredients').value = recipe.ingredients;
+                document.getElementById('instructions').value = recipe.instructions;
+                document.getElementById('is-public').checked = recipe.isPublic || false; // Set share state
+                currentRecipeId = recipe.id; 
+            } else {
+                modalTitle.textContent = "Add New Recipe";
+                document.getElementById('is-public').checked = false;
+            }
+            
+            modal.classList.remove('hidden', 'modal-leave');
+            modal.classList.add('modal-enter');
+        }
+
+        function hideModal() {
+            const modal = document.getElementById('recipe-modal');
+            const communityView = document.getElementById('community-detail-view');
+            if (communityView) communityView.remove();
+            
+            modal.classList.remove('modal-enter');
+            modal.classList.add('modal-leave');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('modal-leave');
+            }, 300);
+        }
+
+        function closeModal(event) {
+            if (event.target.id === 'recipe-modal') {
+                hideModal();
+            }
+        }
+
+        function editRecipe(recipeId) {
+            const recipeToEdit = allPrivateRecipes.find(r => r.id === recipeId);
+            if (recipeToEdit) {
+                showModal(recipeToEdit);
+            } else {
+                showToast("Recipe data not found for editing.", "error");
+            }
+        }
+
+        async function deleteRecipe(recipeId, recipeName) {
+            // NOTE: Using a custom modal is recommended, but using window.confirm for simplicity in this demo.
+            if (!window.confirm(`Are you sure you want to delete the recipe "${recipeName}"?`)) {
+                return;
+            }
+
+            const recipesColRef = getPrivateRecipesCollectionRef();
+            if (!recipesColRef) return;
+
+            try {
+                // 1. Delete private recipe
+                const privateDocRef = doc(recipesColRef, recipeId);
+                await deleteDoc(privateDocRef);
+                
+                // 2. Also delete from public collection (it might not exist, so catch errors)
+                const communityColRef = getCommunityRecipesCollectionRef();
+                const communityDocRef = doc(communityColRef, recipeId);
+                await deleteDoc(communityDocRef).catch(err => {
+                    if (err.code !== 'not-found' && err.code !== 'permission-denied') {
+                         console.warn("Could not delete community entry (may not exist):", err);
+                    }
+                });
+
+                showToast(`Recipe "${recipeName}" deleted successfully!`);
+                
+                if (currentRecipeId === recipeId) {
+                    currentRecipeId = null;
+                    renderRecipeDetail(null);
+                }
+            } catch (e) {
+                console.error("Error deleting recipe: ", e);
+                showToast(`Failed to delete recipe: ${e.message}`, "error");
+            }
+        }
+
+        // --- Event Listeners and Form Submission ---
+
+        document.getElementById('add-recipe-btn').addEventListener('click', () => showModal());
+        
+        document.getElementById('recipe-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('recipe-name').value.trim();
+            const prepTime = parseInt(document.getElementById('prep-time').value);
+            const cookTime = parseInt(document.getElementById('cook-time').value);
+            const ingredients = document.getElementById('ingredients').value.trim();
+            const instructions = document.getElementById('instructions').value.trim();
+            const isPublic = document.getElementById('is-public').checked; // Get public state
+            
+            if (!name || isNaN(prepTime) || isNaN(cookTime) || !ingredients || !instructions) {
+                showToast("Please fill out all fields correctly.", "warning");
+                return;
+            }
+
+            const recipeData = {
+                name,
+                prepTime,
+                cookTime,
+                ingredients, 
+                instructions, 
+                isPublic, // Store public state
+                createdAt: new Date().getTime(),
+                userId: userId, 
+            };
+            
+            const privateColRef = getPrivateRecipesCollectionRef();
+            const communityColRef = getCommunityRecipesCollectionRef();
+            if (!privateColRef || !communityColRef) return;
+            
+            try {
+                if (currentRecipeId) {
+                    // 1. Update existing private recipe
+                    const privateDocRef = doc(privateColRef, currentRecipeId);
+                    await updateDoc(privateDocRef, recipeData);
+
+                    // 2. Manage community copy
+                    const communityDocRef = doc(communityColRef, currentRecipeId);
+                    if (isPublic) {
+                        // Create or update the public copy using setDoc (to use the same ID)
+                        await setDoc(communityDocRef, recipeData);
+                    } else {
+                        // Delete the public copy if it exists
+                        await deleteDoc(communityDocRef).catch(err => {
+                            // Ignore error if document doesn't exist or permission is denied
+                            if (err.code !== 'not-found' && err.code !== 'permission-denied') throw err;
+                        });
+                    }
+                    
+                    showToast(`Recipe "${name}" updated successfully!`);
+
+                } else {
+                    // Add new recipe 
+                    
+                    // 1. Add to private collection (Firestore generates the ID)
+                    const newPrivateDocRef = await addDoc(privateColRef, recipeData);
+                    
+                    // 2. If public, also add to community collection using the same ID
+                    if (isPublic) {
+                        const communityDocRef = doc(communityColRef, newPrivateDocRef.id);
+                        await setDoc(communityDocRef, { ...recipeData, id: newPrivateDocRef.id }); // Add ID to public data for consistency
+                    }
+                    
+                    showToast(`Recipe "${name}" added successfully!`);
+                }
+                
+                hideModal();
+
+            } catch (e) {
+                console.error("Error saving recipe: ", e);
+                showToast(`Failed to save recipe: ${e.message}`, "error");
+            }
+        });
+
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            if (searchTerm === "") {
+                renderRecipeList(allPrivateRecipes);
+                return;
+            }
+
+            // Client-side filtering
+            const filteredRecipes = allPrivateRecipes.filter(recipe => 
+                recipe.name.toLowerCase().includes(searchTerm)
+            );
+            
+            renderRecipeList(filteredRecipes);
+        });
+        
+    </script>
+</body>
+</html>
