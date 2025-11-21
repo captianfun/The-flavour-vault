@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Flavor Vault</title>
+    <title>The Local Recipe Vault</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -12,7 +12,6 @@
             font-family: 'Inter', sans-serif;
             background-color: #f7f9fb;
         }
-        /* Custom scrollbar styling for recipe list */
         .custom-scrollbar::-webkit-scrollbar {
             width: 8px;
         }
@@ -27,7 +26,6 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #6366f1;
         }
-        /* Custom styles for the Recipe Card button */
         .btn-primary {
             transition: all 0.2s ease-in-out;
         }
@@ -35,11 +33,6 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);
         }
-        .btn-primary:disabled {
-            background-color: #a5b4fc; /* indigo-300 */
-            cursor: not-allowed;
-        }
-        /* Custom modal animation */
         .modal-enter {
             opacity: 1;
             transition: opacity 0.3s ease-out;
@@ -48,152 +41,57 @@
             opacity: 0;
             transition: opacity 0.3s ease-in;
         }
-        .nav-link.active {
-            background-color: #f0f4ff; /* indigo-50 */
-            color: #4f46e5; /* indigo-600 */
-            font-weight: 600;
-        }
-        #login-page {
-            /* Full screen layout for login */
-            min-height: 100vh;
-            background: linear-gradient(135deg, #e0f2fe 0%, #a5b4fc 100%);
-        }
-        .login-card {
-            max-width: 400px;
-            width: 90%;
-            background-color: white;
-            padding: 2.5rem;
-            border-radius: 1rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- Login/Registration Page (Now just a Loading Screen for Auth) -->
-    <div id="login-page" class="flex flex-col items-center justify-center p-6 transition-opacity duration-300">
-        <div class="login-card text-center space-y-4">
-            <h1 class="text-3xl font-extrabold text-indigo-700 mb-6">The Flavor Vault</h1>
+    <!-- Header & Navigation -->
+    <header class="bg-white shadow-md sticky top-0 z-20">
+        <div class="max-w-7xl mx-auto flex justify-between items-center p-4">
+            <h1 class="text-3xl font-bold text-indigo-600 tracking-tight">The Local Recipe Vault</h1>
             
-            <div id="status-message" class="text-center p-6 rounded-xl mb-4 text-lg bg-indigo-100 text-indigo-800 font-semibold">
-                <div class="animate-spin inline-block w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full mr-2"></div>
-                <span id="auth-status-text">Initializing authentication and loading your session...</span>
-            </div>
-
-            <p class="text-xs text-gray-400 mt-4 pt-4 border-t border-gray-100">
-                The application automatically secures your session on page load.
-            </p>
+            <button id="add-recipe-btn" class="bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-600 transition duration-150 shadow-md">
+                Add New Recipe
+            </button>
         </div>
-    </div>
-    
-    <!-- Main Application Container (Hidden until Auth is successful) -->
-    <div id="app-container" class="min-h-screen flex flex-col w-full hidden">
-        <!-- Header & Navigation -->
-        <header class="bg-white shadow-md sticky top-0 z-20">
-            <div class="max-w-7xl mx-auto flex justify-between items-center p-4">
-                <h1 class="text-3xl font-bold text-indigo-600 tracking-tight">The Flavor Vault</h1>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl mx-auto w-full p-4">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+
+            <!-- Recipe List Sidebar (Left) -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg h-full max-h-[calc(100vh-140px)] flex flex-col">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">My Recipes</h2>
                 
-                <!-- Navigation Links -->
-                <nav class="flex space-x-2 border border-gray-200 rounded-lg p-1 bg-gray-50">
-                    <button id="nav-my-vault" class="nav-link px-4 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-200 transition" onclick="renderPage('my-vault')">
-                        My Vault
-                    </button>
-                    <button id="nav-community" class="nav-link px-4 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-200 transition" onclick="renderPage('community')">
-                        Community Recipes
-                    </button>
-                    <button id="nav-about" class="nav-link px-4 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-200 transition" onclick="renderPage('about')">
-                        About Us
-                    </button>
-                </nav>
-
-                <div class="flex items-center space-x-4">
-                    <span id="user-display" class="text-sm font-medium text-gray-700">Loading User...</span>
-                    <button id="add-recipe-btn" disabled class="bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-600 transition duration-150 shadow-md disabled:bg-indigo-300 disabled:cursor-not-allowed">
-                        Add New Recipe
-                    </button>
-                    <!-- Sign Out is disabled when running on external platforms with anonymous sign-in 
-                         because the user will just sign back in anonymously on refresh. -->
-                    <button id="sign-out-btn" onclick="handleSignOut()" class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-600 transition duration-150 shadow-md">
-                        Sign Out
-                    </button>
+                <!-- Search Bar -->
+                <div class="mb-4">
+                    <input type="text" id="search-input" placeholder="Search my recipes..."
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
                 </div>
+
+                <!-- List Container -->
+                <div id="recipe-list" class="space-y-3 flex-grow custom-scrollbar overflow-y-auto pr-2">
+                    <p class="text-gray-500 text-center py-4">Loading recipes...</p>
+                </div>
+                <p id="list-footer" class="text-sm text-gray-500 mt-4 text-center">Data is saved only in your browser.</p>
             </div>
-        </header>
 
-        <!-- Main Content Area -->
-        <main class="flex-grow max-w-7xl mx-auto w-full p-4 relative">
-            
-            <!-- 1. MY VAULT PAGE (Default View) -->
-            <div id="my-vault-page" class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full absolute w-full top-0 left-0 p-4 pt-0">
-
-                <!-- Recipe List Sidebar (Left) -->
-                <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg h-full max-h-[calc(100vh-140px)] flex flex-col">
-                    <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">My Private Recipes</h2>
-                    
-                    <!-- Search Bar -->
-                    <div class="mb-4">
-                        <input type="text" id="search-input" placeholder="Search my recipes..."
-                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
-                    </div>
-
-                    <!-- List Container -->
-                    <div id="recipe-list" class="space-y-3 flex-grow custom-scrollbar overflow-y-auto pr-2">
-                        <!-- Recipe list items will be injected here -->
-                        <p class="text-gray-500 text-center py-4">Loading recipes...</p>
-                    </div>
-                    <p id="list-footer" class="text-sm text-gray-500 mt-4 text-center">Your private recipe collection.</p>
-                </div>
-
-                <!-- Recipe Detail Viewer (Right) -->
-                <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
-                    <div id="recipe-detail-container" class="space-y-6">
-                        <!-- Recipe details will be displayed here -->
-                        <div class="text-center py-20 text-gray-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-indigo-400" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-                            </svg>
-                            <h3 class="mt-2 text-lg font-medium">Select a Recipe</h3>
-                            <p class="mt-1 text-sm">Choose a recipe from the index to view its full details, or click 'Add New Recipe' to start creating.</p>
-                        </div>
+            <!-- Recipe Detail Viewer (Right) -->
+            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+                <div id="recipe-detail-container" class="space-y-6">
+                    <!-- Default message -->
+                    <div class="text-center py-20 text-gray-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-indigo-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                        </svg>
+                        <h3 class="mt-2 text-lg font-medium">Select or Create a Recipe</h3>
+                        <p class="mt-1 text-sm">Your recipes are securely saved in your browser's local storage.</p>
                     </div>
                 </div>
             </div>
-            
-            <!-- 2. COMMUNITY PAGE (Public Data) -->
-            <div id="community-page" class="hidden h-full">
-                <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b pb-2">Community Shared Recipes</h2>
-                <p class="text-gray-600 mb-6">Browse and enjoy recipes shared by other users of The Flavor Vault. All recipes here are public.</p>
-                
-                <div id="community-recipe-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    <!-- Community recipe cards will be loaded here -->
-                    <div class="bg-white p-6 rounded-xl shadow-lg text-center col-span-full">
-                        <p class="text-gray-500">Loading community recipes...</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 3. ABOUT US PAGE (Static Content) -->
-            <div id="about-page" class="hidden h-full max-w-3xl mx-auto bg-white p-10 rounded-xl shadow-lg">
-                <h2 class="text-3xl font-bold text-gray-800 mb-4 border-b pb-2">About The Flavor Vault</h2>
-                <p class="text-lg text-indigo-600 mb-6">Your personal kitchen companion for managing and discovering recipes.</p>
-                
-                <div class="space-y-6 text-gray-700">
-                    <p>The Flavor Vault was created to help home cooks organize their favorite dishes. We believe that keeping track of your best recipes should be easy, secure, and always accessible.</p>
-                    
-                    <h3 class="text-xl font-semibold border-b pb-1">Features</h3>
-                    <ul class="list-disc list-inside space-y-2">
-                        <li>**My Vault:** Securely store your private recipes using Firebase Firestore.</li>
-                        <li>**Community:** Share and explore recipes publicly with others.</li>
-                        <li>**Responsive Design:** Access your recipes easily on any device, from phone to desktop.</li>
-                    </ul>
-                    
-                    <h3 class="text-xl font-semibold border-b pb-1">Our Mission</h3>
-                    <p>To foster a small, helpful community where users can save their culinary creations and find new inspiration from others.</p>
-                </div>
-            </div>
-
-        </main>
-    </div>
+        </div>
+    </main>
 
     <!-- Add/Edit Recipe Modal -->
     <div id="recipe-modal" class="modal-enter hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4" onclick="closeModal(event)">
@@ -201,6 +99,9 @@
             <h3 id="modal-title" class="text-2xl font-bold text-gray-800 mb-6 border-b pb-3">Add New Recipe</h3>
             <form id="recipe-form" class="space-y-4">
                 
+                <!-- Hidden ID field for editing -->
+                <input type="hidden" id="recipe-id">
+
                 <!-- Recipe Name -->
                 <div>
                     <label for="recipe-name" class="block text-sm font-medium text-gray-700">Recipe Name</label>
@@ -237,11 +138,7 @@
                               class="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                 </div>
                 
-                <!-- Share Toggle -->
-                <div class="flex items-center pt-2">
-                    <input type="checkbox" id="is-public" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                    <label for="is-public" class="ml-2 block text-sm font-medium text-gray-700">Share with Community (Make this recipe public)</label>
-                </div>
+                <!-- Share Toggle (Removed for local storage version) -->
 
                 <div class="flex justify-end space-x-3 pt-4">
                     <button type="button" onclick="hideModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition duration-150">
@@ -255,7 +152,7 @@
         </div>
     </div>
     
-    <!-- Confirmation Modal (Custom Delete) -->
+    <!-- Confirmation Modal -->
     <div id="confirmation-modal" class="modal-enter hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4" onclick="closeConfirmationModal(event)">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6" onclick="event.stopPropagation()">
             <h3 id="confirm-title" class="text-xl font-bold text-gray-800 mb-4">Confirm Action</h3>
@@ -276,108 +173,18 @@
         <!-- Notifications will appear here -->
     </div>
 
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getAuth, signInWithCustomToken, onAuthStateChanged, 
-            signOut, setPersistence, browserLocalPersistence, signInAnonymously,
-            setPersistence as setAuthPersistence 
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, collection, doc, setDoc, addDoc, onSnapshot, deleteDoc, query, 
-            updateDoc, setLogLevel 
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Set log level for debugging
-        setLogLevel('Debug');
-
-        // --- FIREBASE CONFIGURATION (IMPORTANT FOR GITHUB HOSTING) ---
-        // Global variables are provided by the Canvas environment. 
-        // If you are running this on GitHub or locally, these will be undefined, 
-        // so we use the FALLBACK configuration below.
-        
-        // **ACTION REQUIRED for GitHub:** You MUST replace the placeholder values in 
-        // FALLBACK_FIREBASE_CONFIG with your own credentials from the Firebase Console 
-        // (after setting up a Web App in your Firebase project).
-        const FALLBACK_FIREBASE_CONFIG = {
-            apiKey: "YOUR_FIREBASE_API_KEY_HERE", 
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",   
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "1234567890",
-            appId: "1:1234567890:web:abcdefg12345"
-        };
-        const FALLBACK_APP_ID = "portable-recipe-app";
-
-        // Check if the platform config is available AND doesn't look like a placeholder
-        const platformConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
-        let platformConfig = {};
-        try {
-            platformConfig = JSON.parse(platformConfigString);
-        } catch (e) {
-            console.warn("Could not parse platform config.");
-        }
-        
-        const isPlatformConfigValid = Object.keys(platformConfig).length > 0 && !platformConfig.apiKey?.includes('YOUR_FIREBASE_API_KEY');
-        const isFallbackPlaceholder = FALLBACK_FIREBASE_CONFIG.apiKey.includes('YOUR_FIREBASE_API_KEY');
-
-        const appId = typeof __app_id !== 'undefined' ? __app_id : FALLBACK_APP_ID;
-        let firebaseConfig;
-        let initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        if (isPlatformConfigValid) {
-            // Use config provided by the Canvas platform
-            firebaseConfig = platformConfig;
-        } else if (!isFallbackPlaceholder) {
-            // Use the user-provided fallback config (running on GitHub/local)
-            firebaseConfig = FALLBACK_FIREBASE_CONFIG;
-            initialAuthToken = null; // We cannot use the platform token externally
-        } else {
-            // Placeholder fallback is still present. Set a minimal structure to prevent JS crash.
-            firebaseConfig = {}; 
-        }
-        // ----------------------------------------------------------------------
-        
+    <script>
         // --- Global State ---
-        let app, db, auth;
-        let userId = null;
-        let currentPage = 'my-vault'; 
-        let currentRecipeId = null; 
-        let allPrivateRecipes = [];
-        let allCommunityRecipes = []; 
-
-        // Variables to hold the unsubscribe functions for cleanup
-        let unsubscribePrivate = null;
-        let unsubscribeCommunity = null;
-        
-        // State for custom confirmation modal
-        let confirmationResolver = null;
-
-        // --- Global Functions Exposed to Window ---
-        // Expose functions called directly from HTML onclick attributes
-        window.showModal = showModal;
-        window.hideModal = hideModal;
-        window.closeModal = closeModal;
-        window.selectRecipe = selectRecipe;
-        window.deleteRecipe = deleteRecipe;
-        window.editRecipe = editRecipe;
-        window.renderPage = renderPage; 
-        window.showCommunityDetail = showCommunityDetail;
-        window.handleSignOut = handleSignOut; 
-        window.closeConfirmationModal = closeConfirmationModal;
-        // --- End of Global Function Exposure ---
-
+        const STORAGE_KEY = 'localRecipeVault';
+        let allRecipes = [];
+        let currentRecipeId = null;
+        let confirmationResolver = null; // Promise resolver for custom modal
 
         // --- Utility Functions ---
 
         function showToast(message, type = 'success') {
             const toastContainer = document.getElementById('toast-container');
-            const colorMap = {
-                'success': 'green',
-                'error': 'red',
-                'warning': 'yellow'
-            };
+            const colorMap = { 'success': 'green', 'error': 'red', 'warning': 'yellow' };
             const color = colorMap[type] || 'green';
             
             const toast = document.createElement('div');
@@ -392,309 +199,105 @@
             }, 3000);
         }
 
-        // --- Auth UI Functions ---
-        
-        function showAuthPage(statusText = "Initializing authentication and loading your session...") {
-            document.getElementById('app-container').classList.add('hidden');
-            document.getElementById('login-page').classList.remove('hidden');
-            
-            const statusMessage = document.getElementById('auth-status-text');
-            if (statusMessage) {
-                statusMessage.textContent = statusText;
-            }
+        // --- Local Storage Functions ---
 
-            document.getElementById('user-display').textContent = 'Signed Out';
-            document.getElementById('add-recipe-btn').disabled = true;
-            
-            // Clear lists when signed out
-            allPrivateRecipes = [];
-            allCommunityRecipes = [];
-            renderRecipeList([]);
-            renderRecipeDetail(null);
-            renderCommunityGrid([]);
-        }
-
-        // --- Firebase Initialization and Auth Flow ---
-
-        function showAppContent() {
-            document.getElementById('login-page').classList.add('hidden');
-            document.getElementById('app-container').classList.remove('hidden');
-        }
-
-
-        async function initializeFirebase() {
+        function loadRecipes() {
             try {
-                // Check if the user is running externally with placeholders
-                if (!isPlatformConfigValid && isFallbackPlaceholder) {
-                    showToast("Error: Missing Firebase API Key for external hosting.", "error");
-                    showAuthPage("🚨 ACTION REQUIRED: Please replace 'YOUR_FIREBASE_API_KEY_HERE' and other placeholders in the script with your own configuration to run this application.");
-                    return;
-                }
-                
-                if (Object.keys(firebaseConfig).length === 0) {
-                    showToast("Firebase configuration is missing.", "error");
-                    showAuthPage("Firebase configuration is missing.");
-                    return;
-                } 
-                
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                
-                // 1. Set persistence immediately
-                await setAuthPersistence(auth, browserLocalPersistence); 
-                
-                // 2. Attempt sign-in 
-                if (!auth.currentUser) {
-                    if (initialAuthToken) {
-                        // Priority 1: Use the Canvas custom token for a persistent, unique ID
-                        console.log("Attempting sign-in with Canvas custom token...");
-                        await signInWithCustomToken(auth, initialAuthToken)
-                            .catch(e => {
-                                console.warn("Custom token sign-in failed. Falling back to anonymous.", e.message);
-                                signInAnonymously(auth);
-                            });
-                    } else {
-                        // Priority 2: Use anonymous sign-in (standard for external hosting)
-                        console.log("No custom token found. Attempting anonymous sign-in...");
-                        await signInAnonymously(auth);
-                    }
-                }
-                
-                // 3. Set up the state change listener after the sign-in attempt has completed.
-                onAuthStateChanged(auth, (user) => {
-                    
-                    // 1. Clean up existing listeners
-                    if (unsubscribePrivate) unsubscribePrivate();
-                    if (unsubscribeCommunity) unsubscribeCommunity();
-                    unsubscribePrivate = null;
-                    unsubscribeCommunity = null;
-
-                    if (user) {
-                        // --- Authenticated User Path (Any type: Token, Anonymous) ---
-                        userId = user.uid;
-                        
-                        // Display the last 8 chars of the ID (important for collaboration)
-                        const shortId = userId.substring(userId.length - 8);
-                        const displayId = `...${shortId}`; 
-                        document.getElementById('user-display').textContent = `User ID: ${displayId}`;
-                        
-                        document.getElementById('add-recipe-btn').disabled = false;
-                        console.log("User signed in. Full ID:", userId);
-                        showAppContent();
-
-                        // Start listeners after successful sign-in
-                        unsubscribePrivate = setupPrivateRecipeListener();
-                        unsubscribeCommunity = setupCommunityRecipeListener();
-                        renderPage(currentPage);
-                        
-                    } else {
-                        // --- Completely Signed Out ---
-                        userId = null;
-                        console.log("User is completely signed out.");
-                        showAuthPage("You have been signed out. Refresh the page to start a new session.");
-                    }
-                });
-                
-            } catch (error) {
-                console.error("Firebase setup error:", error);
-                showToast("Failed to initialize Firebase. Check console for details.", "error");
-                showAuthPage("Failed to initialize Firebase.");
+                const recipesJson = localStorage.getItem(STORAGE_KEY);
+                allRecipes = recipesJson ? JSON.parse(recipesJson) : [];
+                return allRecipes;
+            } catch (e) {
+                console.error("Error loading recipes from local storage:", e);
+                showToast("Failed to load recipes. Local storage may be full or restricted.", "error");
+                return [];
             }
         }
 
-        // --- Custom Confirmation Modal Logic ---
-        function showConfirmationModal(title, message) {
-            const modal = document.getElementById('confirmation-modal');
-            document.getElementById('confirm-title').textContent = title;
-            document.getElementById('confirm-message').textContent = message;
-            
-            modal.classList.remove('hidden', 'modal-leave');
-            modal.classList.add('modal-enter');
-
-            return new Promise((resolve) => {
-                confirmationResolver = resolve;
-            });
-        }
-        
-        function closeConfirmationModal(event) {
-             const modal = document.getElementById('confirmation-modal');
-             // Check if the click target is the modal backdrop, or the OK/Cancel buttons
-             if (event.target.id === 'confirmation-modal' || event.target.id === 'confirm-cancel' || event.target.id === 'confirm-ok') {
-                
-                modal.classList.remove('modal-enter');
-                modal.classList.add('modal-leave');
-                
-                // Resolve the promise if clicking OK, or false if clicking cancel/outside
-                if (confirmationResolver) {
-                    const result = event.target.id === 'confirm-ok';
-                    confirmationResolver(result);
-                    confirmationResolver = null; 
-                }
-
-                setTimeout(() => {
-                    modal.classList.add('hidden');
-                    modal.classList.remove('modal-leave');
-                }, 300);
-            }
-        }
-        
-        // Attach event listeners for OK/Cancel buttons 
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('confirm-ok')?.addEventListener('click', closeConfirmationModal);
-            document.getElementById('confirm-cancel')?.addEventListener('click', closeConfirmationModal);
-        });
-
-        // Call initialization on load
-        initializeFirebase();
-
-        // --- Authentication Actions (SignOut) ---
-        
-        async function handleSignOut() {
+        function saveRecipes() {
             try {
-                // Note: If running on GitHub with anonymous auth, the user signs right back in on refresh.
-                await signOut(auth);
-                showToast("Successfully signed out.", "success");
-            } catch (error) {
-                console.error("Sign out error:", error);
-                showToast(`Failed to sign out: ${error.message}`, "error");
-            }
-        }
-
-        // --- Firestore Collection Reference Functions ---
-
-        // Private data path: /artifacts/{appId}/users/{userId}/{your_collection_name}
-        function getPrivateRecipesCollectionRef() {
-            if (!db || !userId) return null;
-            const collectionPath = `artifacts/${appId}/users/${userId}/recipes`;
-            return collection(db, collectionPath);
-        }
-
-        // Public data path: /artifacts/{appId}/public/data/{your_collection_name}
-        function getCommunityRecipesCollectionRef() {
-            if (!db) return null;
-            const collectionPath = `artifacts/${appId}/public/data/community_recipes`;
-            return collection(db, collectionPath);
-        }
-
-        // --- Data Listeners ---
-
-        function setupPrivateRecipeListener() {
-            const recipesColRef = getPrivateRecipesCollectionRef();
-            if (!recipesColRef) {
-                console.warn("Private recipes listener skipped: User not logged in.");
-                return () => {}; // Return a no-op function for consistency
-            }
-            
-            const q = query(recipesColRef);
-
-            // Return the unsubscribe function
-            return onSnapshot(q, (snapshot) => {
-                const recipes = [];
-                snapshot.forEach((doc) => {
-                    recipes.push({ id: doc.id, ...doc.data() });
-                });
-                
-                allPrivateRecipes = recipes;
-                if (currentPage === 'my-vault') {
-                    renderRecipeList(recipes);
-                }
-                
-                // Use the new, stable display ID for the footer
-                const shortId = userId.substring(userId.length - 8);
-                document.getElementById('list-footer').textContent = recipes.length > 0
-                    ? `Total recipes: ${recipes.length}. User ID: ...${shortId}`
-                    : "No recipes yet! Add your first one.";
-
-                // Re-select current recipe if it exists, or select the first one
-                if (currentPage === 'my-vault') {
-                    const selectedRecipe = allPrivateRecipes.find(r => r.id === currentRecipeId);
-                    if (selectedRecipe) {
-                         selectRecipe(currentRecipeId, selectedRecipe.name, false);
-                    } else if (allPrivateRecipes.length > 0) {
-                        selectRecipe(allPrivateRecipes[0].id, allPrivateRecipes[0].name);
-                    } else {
-                        currentRecipeId = null;
-                        renderRecipeDetail(null);
-                    }
-                }
-            }, (error) => {
-                console.error("Error listening to private recipes:", error);
-                showToast("Failed to load private recipes.", "error");
-            });
-        }
-        
-        function setupCommunityRecipeListener() {
-            const communityColRef = getCommunityRecipesCollectionRef();
-            if (!communityColRef) {
-                 console.warn("Community recipes listener skipped: DB not initialized.");
-                 return () => {}; // Return a no-op function for consistency
-            }
-            
-            const q = query(communityColRef);
-
-            // Return the unsubscribe function
-            return onSnapshot(q, (snapshot) => {
-                const recipes = [];
-                snapshot.forEach((doc) => {
-                    recipes.push({ id: doc.id, ...doc.data() });
-                });
-                
-                allCommunityRecipes = recipes;
-                if (currentPage === 'community') {
-                    renderCommunityGrid(recipes);
-                }
-            }, (error) => {
-                console.error("Error listening to community recipes:", error);
-                showToast("Failed to load community recipes.", "error");
-            });
-        }
-
-        // --- Routing and Page Rendering ---
-
-        function renderPage(pageName) {
-            currentPage = pageName;
-            
-            document.querySelectorAll('.nav-link').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.getElementById(`nav-${pageName}`).classList.add('active');
-
-            // Hide all pages
-            document.getElementById('my-vault-page').classList.add('hidden');
-            document.getElementById('community-page').classList.add('hidden');
-            document.getElementById('about-page').classList.add('hidden');
-
-            const addBtn = document.getElementById('add-recipe-btn');
-            if (pageName === 'my-vault') {
-                document.getElementById('my-vault-page').classList.remove('hidden');
-                addBtn.classList.remove('hidden');
-                // Ensure list is rendered if we switch back
-                renderRecipeList(allPrivateRecipes); 
-            } else if (pageName === 'community') {
-                document.getElementById('community-page').classList.remove('hidden');
-                addBtn.classList.add('hidden');
-                renderCommunityGrid(allCommunityRecipes);
-            } else if (pageName === 'about') {
-                document.getElementById('about-page').classList.remove('hidden');
-                addBtn.classList.add('hidden');
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(allRecipes));
+            } catch (e) {
+                console.error("Error saving recipes to local storage:", e);
+                showToast("Failed to save recipes. Local storage may be full or restricted.", "error");
             }
         }
         
-        // --- UI Rendering Functions (My Vault) ---
+        // --- Recipe Lifecycle Functions ---
+
+        function getUniqueId() {
+            // Simple unique ID generation
+            return Date.now().toString(36) + Math.random().toString(36).substring(2);
+        }
+        
+        function saveRecipe(recipeData, recipeId = null) {
+            if (recipeId) {
+                // Editing existing recipe
+                const index = allRecipes.findIndex(r => r.id === recipeId);
+                if (index !== -1) {
+                    allRecipes[index] = { id: recipeId, ...recipeData };
+                    showToast(`Recipe "${recipeData.name}" updated!`, 'success');
+                }
+            } else {
+                // Adding new recipe
+                const newRecipe = { id: getUniqueId(), ...recipeData };
+                allRecipes.push(newRecipe);
+                currentRecipeId = newRecipe.id;
+                showToast(`New recipe "${recipeData.name}" created!`, 'success');
+            }
+
+            saveRecipes();
+            renderRecipeList(allRecipes);
+            // After saving, select the recipe to show details
+            selectRecipe(currentRecipeId || recipeId, recipeData.name, true); 
+        }
+
+        function deleteRecipe(recipeId, recipeName) {
+            allRecipes = allRecipes.filter(r => r.id !== recipeId);
+            saveRecipes();
+            
+            showToast(`Recipe "${recipeName}" deleted!`, 'success');
+            
+            // If the deleted recipe was the selected one, clear the detail view
+            if (currentRecipeId === recipeId) {
+                currentRecipeId = null;
+                renderRecipeDetail(null);
+            }
+            
+            renderRecipeList(allRecipes);
+        }
+
+        // --- UI Rendering Functions ---
+
+        function formatTextToList(text, ordered = false) {
+            if (!text) return '<p class="text-gray-500">None provided.</p>';
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            if (ordered) {
+                return lines.map((line, index) => `<li class="mb-3 pl-2 font-medium text-gray-700">${index + 1}. ${line.trim()}</li>`).join('');
+            } else {
+                return lines.map(line => `<li class="list-disc ml-6">${line.trim()}</li>`).join('');
+            }
+        }
 
         function renderRecipeList(recipes) {
             const listContainer = document.getElementById('recipe-list');
             listContainer.innerHTML = ''; 
 
             if (recipes.length === 0) {
-                listContainer.innerHTML = '<p class="text-gray-500 text-center py-4">No recipes found. Start adding some!</p>';
+                listContainer.innerHTML = '<p class="text-gray-500 text-center py-4">No recipes found. Click "Add New Recipe" to start.</p>';
+                document.getElementById('list-footer').textContent = "Data is saved only in your browser.";
                 return;
             }
             
-            recipes.forEach(recipe => {
+            // Apply search filter
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const filteredRecipes = recipes.filter(r => r.name.toLowerCase().includes(searchTerm) || r.ingredients.toLowerCase().includes(searchTerm));
+
+            if (filteredRecipes.length === 0) {
+                 listContainer.innerHTML = '<p class="text-gray-500 text-center py-4">No recipes match your search.</p>';
+            }
+
+            filteredRecipes.forEach(recipe => {
                 const isActive = recipe.id === currentRecipeId;
-                // Safely escape single quotes for onclick attribute
                 const escapedName = recipe.name.replace(/'/g, "\\'");
                 
                 const recipeItem = `
@@ -708,16 +311,7 @@
                 `;
                 listContainer.innerHTML += recipeItem;
             });
-        }
-
-        function formatTextToList(text, ordered = false) {
-            if (!text) return '<p class="text-gray-500">None provided.</p>';
-            const lines = text.split('\n').filter(line => line.trim() !== '');
-            if (ordered) {
-                return lines.map((line, index) => `<li class="mb-3 pl-2">${index + 1}. ${line.trim()}</li>`).join('');
-            } else {
-                return lines.map(line => `<li class="list-disc ml-6">${line.trim()}</li>`).join('');
-            }
+            document.getElementById('list-footer').textContent = `Total recipes: ${recipes.length}. Saved in your browser's local storage.`;
         }
 
         function renderRecipeDetail(recipe) {
@@ -729,8 +323,8 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-indigo-400" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
                         </svg>
-                        <h3 class="mt-2 text-lg font-medium">Select a Recipe</h3>
-                        <p class="mt-1 text-sm">Choose a recipe from the index to view its full details.</p>
+                        <h3 class="mt-2 text-lg font-medium">Select or Create a Recipe</h3>
+                        <p class="mt-1 text-sm">Your recipes are securely saved in your browser's local storage.</p>
                     </div>
                 `;
                 return;
@@ -745,7 +339,6 @@
                         <div>
                             <h2 class="text-4xl font-bold text-gray-800">${recipe.name}</h2>
                             <p class="text-sm text-indigo-600 font-medium mt-1">Total Time: <span class="text-gray-600">${totalTime} minutes</span></p>
-                            <p class="text-xs text-gray-400 mt-1">Shared: ${recipe.isPublic ? 'Yes' : 'No'}</p>
                         </div>
                         <div class="flex space-x-2">
                             <button onclick="editRecipe('${recipe.id}')" 
@@ -756,7 +349,7 @@
                                     <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
                                 </svg>
                             </button>
-                            <button onclick="deleteRecipe('${recipe.id}', '${escapedName}')" 
+                            <button onclick="openDeleteConfirmation('${recipe.id}', '${escapedName}')" 
                                 class="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition duration-150" 
                                 title="Delete Recipe">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -796,131 +389,20 @@
                 </div>
             `;
         }
-        
-        // --- UI Rendering Functions (Community) ---
-        
-        function renderCommunityGrid(recipes) {
-            const gridContainer = document.getElementById('community-recipe-grid');
-            gridContainer.innerHTML = '';
-            
-            if (recipes.length === 0) {
-                gridContainer.innerHTML = `
-                    <div class="bg-white p-6 rounded-xl shadow-lg text-center col-span-full">
-                        <p class="text-gray-500">No community recipes have been shared yet. Be the first to share one!</p>
-                    </div>
-                `;
-                return;
-            }
-
-            recipes.forEach(recipe => {
-                const totalTime = parseInt(recipe.prepTime || 0) + parseInt(recipe.cookTime || 0);
-                
-                // Shorten the shared user ID for display
-                const sharedUserId = recipe.userId || 'Unknown';
-                const shortSharedId = sharedUserId.length > 8 ? `...${sharedUserId.substring(sharedUserId.length - 8)}` : sharedUserId;
-
-
-                const card = `
-                    <div class="bg-white p-5 rounded-xl shadow-lg border-t-4 border-indigo-400 flex flex-col justify-between">
-                        <div>
-                            <h3 class="text-xl font-bold text-gray-800 mb-2 truncate">${recipe.name}</h3>
-                            <p class="text-sm text-gray-500 mb-3">
-                                Shared by user: <span class="font-medium">${shortSharedId}</span>
-                            </p>
-                            <div class="flex justify-between items-center text-sm text-gray-600">
-                                <span>Prep: ${recipe.prepTime} min</span>
-                                <span>Cook: ${recipe.cookTime} min</span>
-                            </div>
-                            <p class="text-xs text-indigo-500 mt-2">Total Time: ${totalTime} min</p>
-                        </div>
-                        <button onclick="showCommunityDetail('${recipe.id}')" 
-                                class="mt-4 w-full bg-indigo-500 text-white py-2 rounded-lg text-sm font-semibold hover:bg-indigo-600 transition duration-150">
-                            View Recipe
-                        </button>
-                    </div>
-                `;
-                gridContainer.innerHTML += card;
-            });
-        }
-        
-        function showCommunityDetail(recipeId) {
-            const recipe = allCommunityRecipes.find(r => r.id === recipeId);
-            if (!recipe) {
-                showToast("Community recipe not found.", "error");
-                return;
-            }
-            
-            const modal = document.getElementById('recipe-modal');
-            const contentDiv = document.querySelector('#recipe-modal > div');
-            
-            const communityViewCleanup = document.getElementById('community-detail-view');
-            if (communityViewCleanup) communityViewCleanup.remove();
-
-            document.getElementById('modal-title').textContent = `Community Recipe: ${recipe.name}`;
-            document.getElementById('recipe-form').classList.add('hidden'); 
-            
-            const sharedUserId = recipe.userId || 'Unknown';
-            const shortSharedId = sharedUserId.length > 8 ? `...${sharedUserId.substring(sharedUserId.length - 8)}` : sharedUserId;
-
-            const detailHtml = `
-                <div id="community-detail-view" class="space-y-4 pt-4">
-                    <p class="text-sm text-gray-500 border-b pb-2">Shared by user: <span class="font-medium text-indigo-600">${shortSharedId}</span></p>
-
-                    <div class="grid grid-cols-2 gap-4 text-center">
-                        <div class="bg-indigo-50 p-3 rounded-lg">
-                            <p class="text-lg font-bold text-indigo-700">${recipe.prepTime} min</p>
-                            <p class="text-xs text-indigo-500">Prep Time</p>
-                        </div>
-                        <div class="bg-indigo-50 p-3 rounded-lg">
-                            <p class="text-lg font-bold text-indigo-700">${recipe.cookTime} min</p>
-                            <p class="text-xs text-indigo-500">Cook Time</p>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-gray-100 p-4 rounded-lg">
-                        <h4 class="text-lg font-semibold text-gray-700 mb-2 border-b">Ingredients</h4>
-                        <ul class="text-gray-600 list-none space-y-1">
-                            ${formatTextToList(recipe.ingredients)}
-                        </ul>
-                    </div>
-                    
-                    <div class="bg-gray-100 p-4 rounded-lg">
-                        <h4 class="text-lg font-semibold text-gray-700 mb-2 border-b">Instructions</h4>
-                        <ol class="text-gray-600 list-none space-y-2">
-                            ${formatTextToList(recipe.instructions, true)}
-                        </ol>
-                    </div>
-
-                    <div class="flex justify-end pt-4">
-                        <button type="button" onclick="hideModal()" class="px-4 py-2 bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-600 transition">
-                            Close
-                        </button>
-                    </div>
-                </div>
-            `;
-            
-            contentDiv.insertAdjacentHTML('beforeend', detailHtml);
-            modal.classList.remove('hidden', 'modal-leave');
-            modal.classList.add('modal-enter');
-        }
-
-
-        // --- Interaction Logic (My Vault, Modal) ---
 
         function selectRecipe(recipeId, recipeName, updateList = true) {
             currentRecipeId = recipeId;
-            const recipe = allPrivateRecipes.find(r => r.id === recipeId);
+            const recipe = allRecipes.find(r => r.id === recipeId);
 
             if (recipe) {
                 renderRecipeDetail(recipe);
             } else {
-                // If recipe was just deleted, clear the detail view
                 renderRecipeDetail(null);
                 currentRecipeId = null; 
             }
 
             if (updateList) {
-                // Remove active styling from all buttons
+                // Update active styling
                 document.querySelectorAll('#recipe-list button').forEach(btn => {
                     btn.classList.remove('bg-indigo-100', 'text-indigo-700', 'shadow-inner');
                     btn.classList.add('bg-gray-50', 'hover:bg-indigo-50', 'hover:text-indigo-600');
@@ -931,7 +413,6 @@
                     }
                 });
 
-                // Apply active styling to the selected button
                 const currentButton = document.getElementById(`recipe-item-${recipeId}`);
                 if (currentButton) {
                     currentButton.classList.add('bg-indigo-100', 'text-indigo-700', 'shadow-inner');
@@ -945,32 +426,26 @@
             }
         }
         
-        document.getElementById('add-recipe-btn').addEventListener('click', () => showModal());
+        // --- Modal Functions ---
 
         function showModal(recipe = null) {
             const modal = document.getElementById('recipe-modal');
             const form = document.getElementById('recipe-form');
             const modalTitle = document.getElementById('modal-title');
             
-            const communityView = document.getElementById('community-detail-view');
-            if (communityView) communityView.remove();
-            
-            form.classList.remove('hidden'); 
             form.reset();
-            currentRecipeId = null; 
 
             if (recipe) {
                 modalTitle.textContent = `Edit Recipe: ${recipe.name}`;
+                document.getElementById('recipe-id').value = recipe.id;
                 document.getElementById('recipe-name').value = recipe.name;
                 document.getElementById('prep-time').value = recipe.prepTime;
                 document.getElementById('cook-time').value = recipe.cookTime;
                 document.getElementById('ingredients').value = recipe.ingredients;
                 document.getElementById('instructions').value = recipe.instructions;
-                document.getElementById('is-public').checked = recipe.isPublic || false; 
-                currentRecipeId = recipe.id; 
             } else {
                 modalTitle.textContent = "Add New Recipe";
-                document.getElementById('is-public').checked = false;
+                document.getElementById('recipe-id').value = '';
             }
             
             modal.classList.remove('hidden', 'modal-leave');
@@ -979,9 +454,6 @@
 
         function hideModal() {
             const modal = document.getElementById('recipe-modal');
-            const communityView = document.getElementById('community-detail-view');
-            if (communityView) communityView.remove();
-            
             modal.classList.remove('modal-enter');
             modal.classList.add('modal-leave');
             
@@ -998,111 +470,101 @@
         }
 
         function editRecipe(recipeId) {
-            const recipeToEdit = allPrivateRecipes.find(r => r.id === recipeId);
+            const recipeToEdit = allRecipes.find(r => r.id === recipeId);
             if (recipeToEdit) {
                 showModal(recipeToEdit);
             } else {
                 showToast("Recipe data not found for editing.", "error");
             }
         }
-
-        async function deleteRecipe(recipeId, recipeName) {
+        
+        // --- Custom Confirmation Modal Logic ---
+        function showConfirmationModal(title, message) {
+            const modal = document.getElementById('confirmation-modal');
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
             
+            modal.classList.remove('hidden', 'modal-leave');
+            modal.classList.add('modal-enter');
+
+            return new Promise((resolve) => {
+                confirmationResolver = resolve;
+            });
+        }
+        
+        function closeConfirmationModal(event) {
+             const modal = document.getElementById('confirmation-modal');
+             // Check if the click target is the modal backdrop, or the OK/Cancel buttons
+             if (event.target.id === 'confirmation-modal' || event.target.id === 'confirm-cancel' || event.target.id === 'confirm-ok') {
+                
+                modal.classList.remove('modal-enter');
+                modal.classList.add('modal-leave');
+                
+                // Resolve the promise if clicking OK, or false if clicking cancel/outside
+                if (confirmationResolver) {
+                    const result = event.target.id === 'confirm-ok';
+                    confirmationResolver(result);
+                    confirmationResolver = null; 
+                }
+
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('modal-leave');
+                }, 300);
+            }
+        }
+        
+        async function openDeleteConfirmation(recipeId, recipeName) {
             const confirmed = await showConfirmationModal(
                 "Delete Recipe Confirmation",
                 `Are you absolutely sure you want to permanently delete "${recipeName}"? This action cannot be undone.`
             );
 
-            if (!confirmed) {
-                return;
-            }
-
-            const recipesColRef = getPrivateRecipesCollectionRef();
-            if (!recipesColRef) {
-                showToast("Cannot connect to your Vault. Please try again.", "error");
-                return;
-            }
-
-            try {
-                // Delete the document
-                await deleteDoc(doc(recipesColRef, recipeId));
-                showToast(`Recipe "${recipeName}" deleted!`, "success");
-            } catch (error) {
-                console.error("Error deleting recipe:", error);
-                showToast(`Failed to delete recipe: ${error.message}`, "error");
+            if (confirmed) {
+                deleteRecipe(recipeId, recipeName);
             }
         }
-        
-        // --- Form Submission (Add/Edit) ---
-        document.getElementById('recipe-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
+
+        // --- Event Listeners and Initialization ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load and render initial state
+            loadRecipes();
+            renderRecipeList(allRecipes);
             
-            const name = document.getElementById('recipe-name').value.trim();
-            const prepTime = parseInt(document.getElementById('prep-time').value);
-            const cookTime = parseInt(document.getElementById('cook-time').value);
-            const ingredients = document.getElementById('ingredients').value.trim();
-            const instructions = document.getElementById('instructions').value.trim();
-            const isPublic = document.getElementById('is-public').checked;
-
-            const recipeData = {
-                name,
-                prepTime,
-                cookTime,
-                ingredients,
-                instructions,
-                isPublic,
-                userId: userId,
-            };
-
-            const isEditing = !!currentRecipeId;
-            const recipesColRef = getPrivateRecipesCollectionRef();
-            const communityColRef = getCommunityRecipesCollectionRef();
-
-            if (!recipesColRef || !communityColRef) {
-                showToast("Authentication or database connection error.", "error");
-                return;
+            // Initial selection: select the first recipe if any exist
+            if (allRecipes.length > 0) {
+                selectRecipe(allRecipes[0].id, allRecipes[0].name);
             }
 
-            try {
-                if (isEditing) {
-                    // 1. Update Private Recipe (Always update here)
-                    const privateDocRef = doc(recipesColRef, currentRecipeId);
-                    await updateDoc(privateDocRef, recipeData);
-                    
-                    // 2. Update/Delete Community Recipe
-                    const communityDocRef = doc(communityColRef, currentRecipeId);
-                    if (isPublic) {
-                        // If sharing, set/overwrite the community document (using the same ID)
-                        await setDoc(communityDocRef, recipeData);
-                    } else {
-                        // If unsharing, delete it from the community collection
-                        await deleteDoc(communityDocRef).catch(() => {}); // Ignore error if it didn't exist
-                    }
+            // Event for Add New Recipe button
+            document.getElementById('add-recipe-btn').addEventListener('click', () => showModal());
 
-                    showToast(`Recipe "${name}" updated successfully!`, "success");
+            // Event for search input
+            document.getElementById('search-input').addEventListener('input', () => {
+                renderRecipeList(allRecipes);
+            });
+            
+            // Attach event listeners for confirmation modal buttons
+            document.getElementById('confirm-ok').addEventListener('click', closeConfirmationModal);
+            document.getElementById('confirm-cancel').addEventListener('click', closeConfirmationModal);
 
-                } else {
-                    // 1. Add Private Recipe (Firestore assigns ID)
-                    const newPrivateDocRef = await addDoc(recipesColRef, recipeData);
-                    currentRecipeId = newPrivateDocRef.id;
-
-                    // 2. Conditionally Add Community Recipe
-                    if (isPublic) {
-                        // Use the new private ID for the public document
-                        const communityDocRef = doc(communityColRef, newPrivateDocRef.id);
-                        await setDoc(communityDocRef, recipeData);
-                    }
-                    
-                    showToast(`New recipe "${name}" created!`, "success");
-                }
-
-                hideModal();
-                selectRecipe(currentRecipeId, name);
+            // Form submission logic
+            document.getElementById('recipe-form').addEventListener('submit', (e) => {
+                e.preventDefault();
                 
-            } catch (error) {
-                console.error("Error saving recipe:", error);
-                showToast(`Failed to save recipe: ${error.message}`, "error");
-            }
+                const recipeId = document.getElementById('recipe-id').value;
+                const name = document.getElementById('recipe-name').value.trim();
+                const prepTime = parseInt(document.getElementById('prep-time').value);
+                const cookTime = parseInt(document.getElementById('cook-time').value);
+                const ingredients = document.getElementById('ingredients').value.trim();
+                const instructions = document.getElementById('instructions').value.trim();
+
+                const recipeData = { name, prepTime, cookTime, ingredients, instructions };
+                
+                saveRecipe(recipeData, recipeId);
+                hideModal();
+            });
         });
     </script>
 </body>
